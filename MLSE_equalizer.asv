@@ -1,0 +1,24 @@
+% Objective: Use reset operating mode of mlseeq equalizer
+% to demodulate the signal and check for BER
+
+M = 2; % modulation order
+tblen =  10; % equalizer traceback depth
+nsamp = 2;  %No. of samples
+msgLen = 1000; % message length
+
+
+const = pammod([0:M-1],M); %generating reference constellation
+
+%generating msg with random data: modulate and upsample the data
+msgData = randi([0 M-1],msgLen,1); % generating random msg
+msgSym = pammod(msgData,M);% using PAM modulation to generate 'fig 9-pg 1599'- of paper
+msgSymUp = upsample(msgSym,nsamp); % upsampling the signal
+
+% 
+channel_estimation = [0.986; 0.845; 0.237; 0.12345+0.31i]; % signal estimation parameter
+msgFilt = filter(channel_estimation,1,msgSymUp); % filtering the data through a lossy channel
+msgRx = awgn(msgFilt,5,'measured'); % received message  'z' after adding 'w'-as noise - following
+eqSym = mlseeq(msgRx,channel_estimation,const,tblen,'rst',nsamp);
+eqMsg = pamdemod(eqSym,M);
+
+[nerrs ber] = biterr(msgData, eqMsg)
